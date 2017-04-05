@@ -16,8 +16,10 @@
 
 import os
 
+import json
 from oslo_config import cfg
 from oslo_utils import uuidutils
+import requests
 
 from sahara import conductor as c
 from sahara import context
@@ -93,16 +95,22 @@ class SparkJobEngine(base_engine.JobEngine):
         if self._check_pid(r, pid) == 0:
             return {"status": edp.JOB_STATUS_RUNNING}
 
+        headers = {'content-Type': 'application/json'}
+        url = "http://0.0.0.0:1514/manager/application_stopped/" + job_execution['id']
+        print "Making request to", url
         # The process ended. Look in the result file to get the exit status
         ret, stdout = self._get_result_file(r, job_execution)
         if ret == 0:
             exit_status = stdout.strip()
             if exit_status == "0":
+                requests.post(url, json.dumps({}))
                 return {"status": edp.JOB_STATUS_SUCCEEDED}
             # SIGINT will yield either -2 or 130
             elif exit_status in ["-2", "130"]:
+                requests.post(url, json.dumps({}))
                 return {"status": edp.JOB_STATUS_KILLED}
 
+        requests.post(url, data=json.dumps({}))
         # Well, process is done and result is missing or unexpected
         return {"status": edp.JOB_STATUS_DONEWITHERROR}
 

@@ -15,7 +15,9 @@
 
 from oslo_config import cfg
 from oslo_log import log as logging
+import requests
 import six
+import json
 
 from sahara import conductor as c
 from sahara import context
@@ -134,6 +136,16 @@ def execute_job(job_id, data):
             conductor.job_execution_destroy(context.ctx(), job_execution)
             raise
 
+    import pdb; pdb.set_trace()
+    headers = {'content-Type': 'application/json'}
+    url = "http://0.0.0.0:1514/manager/application_started/" + job_execution['id']
+    print "Making request to", url
+    context_dict = context.ctx().__dict__
+    body = dict(project_id=context_dict['_project_id'],
+                cluster_id=cluster_id,
+                token=context_dict['auth_token'])
+    print "Passing arguments as", body
+    requests.post(url, headers=headers, data=json.dumps(body))
     api.OPS.run_edp_job(job_execution.id)
 
     return job_execution
